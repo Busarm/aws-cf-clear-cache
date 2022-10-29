@@ -1,0 +1,56 @@
+service: AWS-CF-Clear-Cache
+
+frameworkVersion: "2 || 3"
+
+provider:
+    name: aws
+    runtime: python3.7
+    lambdaHashingVersion: 20201221
+    profile: busarm # Replace with your local deployment profile
+    region: ${opt:region, 'eu-west-2'} # e.g serverless delopy --region eu-west-2 (default = 'eu-west-2')
+    stage: ${opt:stage, 'Dev'} # e.g serverless delopy --stage dev (default = 'dev')
+    role: CFClearCacheLambdaRole
+
+package:
+    exclude:
+        - .git/**
+        - .serverless/**
+        - .gitignore
+        - README.md
+
+functions:
+    Handler:
+        handler: handler.run
+        memorySize: 128
+        description: "Clear Cloudfront distribution cache"
+
+resources:
+    Resources:
+        CFClearCacheLambdaRole:
+            Type: AWS::IAM::Role
+            Properties:
+                RoleName: CFClearCacheLambdaRole-${self:provider.region}
+                Path: /
+                AssumeRolePolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                        - Effect: Allow
+                          Principal:
+                              Service:
+                                  - lambda.amazonaws.com
+                          Action: sts:AssumeRole
+                Policies:
+                    - PolicyName: CFClearCacheLambdaPolicy
+                      PolicyDocument:
+                          Version: "2012-10-17"
+                          Statement:
+                              - Effect: Allow # note that these rights are given in the default policy and are required if you want logs out of your lambda(s)
+                                Action:
+                                    - logs:CreateLogGroup
+                                    - logs:CreateLogStream
+                                    - logs:PutLogEvents
+                                    - codepipeline:PutJobFailureResult
+                                    - codepipeline:PutJobSuccessResult
+                                    - cloudfront:CreateInvalidation
+                                    - cloudfront:UpdateDistribution
+                                Resource: "*"

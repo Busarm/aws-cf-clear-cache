@@ -1,0 +1,182 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The AWS CloudFormation template for this Serverless application",
+  "Resources": {
+    "ServerlessDeploymentBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ServerlessDeploymentBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "ServerlessDeploymentBucket"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:*",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      },
+                      "/*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      }
+                    ]
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "HandlerLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/AWS-CF-Clear-Cache-Dev-Handler"
+      }
+    },
+    "HandlerLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/AWS-CF-Clear-Cache/Dev/1667030910546-2022-10-29T08:08:30.546Z/AWS-CF-Clear-Cache.zip"
+        },
+        "Handler": "handler.run",
+        "Runtime": "python3.7",
+        "FunctionName": "AWS-CF-Clear-Cache-Dev-Handler",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Description": "Clear Cloudfront distribution cache",
+        "Role": {
+          "Fn::GetAtt": [
+            "CFClearCacheLambdaRole",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "HandlerLogGroup",
+        "CFClearCacheLambdaRole"
+      ]
+    },
+    "HandlerLambdaVersionsnnQbobnxX5h15JQryT4eiI5USelGUo6JAHqYAyHU": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "HandlerLambdaFunction"
+        },
+        "CodeSha256": "MaVd0FaaGvyAXHBCs6Ex9hGPRq4RBchtPHOMyVC32kY=",
+        "Description": "Clear Cloudfront distribution cache"
+      }
+    },
+    "CFClearCacheLambdaRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "CFClearCacheLambdaRole-eu-west-2",
+        "Path": "/",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "CFClearCacheLambdaPolicy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "codepipeline:PutJobFailureResult",
+                    "codepipeline:PutJobSuccessResult",
+                    "cloudfront:CreateInvalidation",
+                    "cloudfront:UpdateDistribution"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "ServerlessDeploymentBucketName": {
+      "Value": {
+        "Ref": "ServerlessDeploymentBucket"
+      },
+      "Export": {
+        "Name": "sls-AWS-CF-Clear-Cache-Dev-ServerlessDeploymentBucketName"
+      }
+    },
+    "HandlerLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "HandlerLambdaVersionsnnQbobnxX5h15JQryT4eiI5USelGUo6JAHqYAyHU"
+      },
+      "Export": {
+        "Name": "sls-AWS-CF-Clear-Cache-Dev-HandlerLambdaFunctionQualifiedArn"
+      }
+    }
+  }
+}
